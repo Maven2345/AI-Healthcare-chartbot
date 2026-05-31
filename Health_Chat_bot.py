@@ -1,16 +1,25 @@
-import re
+import subprocess
+import sys
+
+# Force-install scikit-learn dynamically if Streamlit skips it
+try:
+    from sklearn import preprocessing
+except ModuleNotFoundError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "scikit-learn"])
+    from sklearn import preprocessing
+
 import random
 import pandas as pd
 import numpy as np
 import csv
 import streamlit as st
-from sklearn import preprocessing
+import re  
+import time 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from difflib import get_close_matches
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-
 # Set Page Config
 st.set_page_config(page_title="AI Healthcare Diagnostic Assistant", layout="wide", page_icon="🩺")
 
