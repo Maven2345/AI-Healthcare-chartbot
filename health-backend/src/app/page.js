@@ -82,11 +82,11 @@ function VoiceAppLayout({ state = 'listening', transcript = 'Listening for spoke
 function VoiceAgentSession() {
   const connectionState = useConnectionState();
   
-  // Use the correct plural hook name
+  // 1. Pull the raw transcriptions array directly (no curly braces!)
   const transcriptions = useTranscriptions();     
     
-  // Check the lengths and safely extract the active string text
-  const currentTranscript = transcriptions.length > 0   
+  // 2. Safely grab the text from the last element in the array
+  const currentTranscript = transcriptions && transcriptions.length > 0   
     ? `"${transcriptions[transcriptions.length - 1].text}"` 
     : "Listening for your voice...";
   const derivedState = connectionState === 'connected' ? 'listening' : 'connecting';
