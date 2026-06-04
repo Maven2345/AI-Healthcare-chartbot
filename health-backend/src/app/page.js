@@ -1,7 +1,8 @@
 'use client'; // Required for LiveKit frontend state management
 
 import React from 'react';
-import { useConnectionState, useTranscriptions } from '@livekit/components-react';
+// Remove useTranscript and useTranscriptions completely from this line
+import { useConnectionState, LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
 import { PhoneOff, Activity } from 'lucide-react';
 
 // =====================================================================
@@ -82,23 +83,20 @@ function VoiceAppLayout({ state = 'listening', transcript = 'Listening for spoke
 function VoiceAgentSession() {
   const connectionState = useConnectionState();
   
-  // Placeholder text to bypass the hook error entirely
-  const currentTranscript = connectionState === "connected" 
-    ? "AI is actively listening..." 
-    : "Waiting to connect...";
+  // Clean placeholder string that uses NO hooks
+  const currentTranscript = "AI Healthcare Assistant Active";
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-4 p-6">
-      <div className="text-xl font-semibold tracking-wide text-white animate-pulse">
+    <div className="flex flex-col items-center justify-center p-6 space-y-4">
+      <div className="text-xl font-semibold text-white animate-pulse">
         {currentTranscript}
       </div>
       <div className="text-sm text-gray-400">
-        Status: <span className="capitalize text-emerald-400">{connectionState}</span>
+        Status: <span className="text-emerald-400 capitalize">{connectionState}</span>
       </div>
     </div>
   );
 }
-
 // =====================================================================
 // 🚀 LAYER 3: MAIN PAGE ENTRY POINT RENDERER
 // =====================================================================
