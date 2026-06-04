@@ -1,0 +1,19 @@
+{
+  "name": "ai-healthcare-chatbot",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@livekit/components-react": "^2.9.21",
+    "livekit-client": "^2.19.1",
+    "lucide-react": "^0.400.0",
+    "next": "14.2.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
