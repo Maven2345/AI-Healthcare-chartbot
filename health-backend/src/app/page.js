@@ -82,21 +82,20 @@ function VoiceAppLayout({ state = 'listening', transcript = 'Listening for spoke
 function VoiceAgentSession() {
   const connectionState = useConnectionState();
   
-  // 1. Pull the raw transcriptions array directly (no curly braces!)
-  const transcriptions = useTranscriptions();     
-    
-  // 2. Safely grab the text from the last element in the array
-  const currentTranscript = transcriptions && transcriptions.length > 0   
-    ? `"${transcriptions[transcriptions.length - 1].text}"` 
-    : "Listening for your voice...";
-  const derivedState = connectionState === 'connected' ? 'listening' : 'connecting';
+  // Placeholder text to bypass the hook error entirely
+  const currentTranscript = connectionState === "connected" 
+    ? "AI is actively listening..." 
+    : "Waiting to connect...";
 
   return (
-    <VoiceAppLayout 
-      state={derivedState} 
-      transcript={currentTranscript}
-      latency="Connected"
-    />
+    <div className="flex flex-col items-center justify-center space-y-4 p-6">
+      <div className="text-xl font-semibold tracking-wide text-white animate-pulse">
+        {currentTranscript}
+      </div>
+      <div className="text-sm text-gray-400">
+        Status: <span className="capitalize text-emerald-400">{connectionState}</span>
+      </div>
+    </div>
   );
 }
 
