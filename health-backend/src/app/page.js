@@ -1,7 +1,7 @@
 'use client'; // Required for LiveKit frontend state management
 
 import React from 'react';
-import { LiveKitRoom, useTranscript, useConnectionState } from '@livekit/components-react';
+import { useConnectionState, useTranscriptions } from '@livekit/components-react';
 import { PhoneOff, Activity } from 'lucide-react';
 
 // =====================================================================
@@ -81,12 +81,14 @@ function VoiceAppLayout({ state = 'listening', transcript = 'Listening for spoke
 // =====================================================================
 function VoiceAgentSession() {
   const connectionState = useConnectionState();
-  const { segments } = useTranscript();
   
-  const currentTranscript = segments.length > 0 
-    ? `"${segments[segments.length - 1].text}"` 
-    : "Listening for spoken text analysis...";
+  // Use the correct plural hook name
+  const transcriptions = useTranscriptions();     
     
+  // Check the lengths and safely extract the active string text
+  const currentTranscript = transcriptions.length > 0   
+    ? `"${transcriptions[transcriptions.length - 1].text}"` 
+    : "Listening for your voice...";
   const derivedState = connectionState === 'connected' ? 'listening' : 'connecting';
 
   return (
