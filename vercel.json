@@ -1,8 +1,4 @@
 {
-  "builds": [
-    {
-      "src": "health-backend/package.json",
-      "use": "@vercel/next"
-    }
-  ]
+  "rootDirectory": "health-backend",
+  "framework": "nextjs"
 }
