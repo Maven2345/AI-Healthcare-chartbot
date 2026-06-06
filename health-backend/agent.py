@@ -1,39 +1,49 @@
 import asyncio
 from dotenv import load_dotenv
-from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, llm
-from livekit.plugins import openai, deepgram
+from livekit import agents
+from livekit.agents import JobContext, WorkerOptions, cli, llm
+from livekit.plugins import deepgram, openai
 
-# Load your API keys from a .env file (LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, OPENAI_API_KEY)
+# Load API keys from your environment variables
 load_dotenv()
 
 async def entrypoint(ctx: JobContext):
-    await ctx.connect(auto_subscribe=AgentOptions.AUDIO_ONLY)
-    
-    # 1. Your code that loads the Namibian guidelines txt file into a string:
-    with open("../KnowledgeBase/namibia_health_guidelines.txt", "r", encoding="utf-8") as f:
-        knowledge_context = f.read()
+    print(f"📡 New voice connection received! Job ID: {ctx.job.id}")
 
-    # 2. PLACE THE NEW PIECE RIGHT HERE:
-    regional_system_prompt = (
-        f"You are an interactive, local Namibian AI Health Representative. You can accept inputs in English, "
-        f"Oshikwanyama, Oshindonga, Oshikwambi, Oshinganjera, Oshibalantu, Nama/Khoekhoegowab, Otjiherero, "
-        f"Rukwangali, Silozi, Subiya, Mafwe, Mbukushu, Rumanyo, and Afrikaans.\n\n"
-        f"GROUND TRUTH REGIONAL KNOWLEDGE BASE TO USE:\n{knowledge_context}\n"
-        f"Always respond in the exact local language the client used to speak to you."
+    # Step 1: Accept the incoming WebRTC connection from the user
+    await ctx.connect(auto_subscribe=agents.AutoSubscribe.AUDIO_ONLY)
+
+    # Step 2: Define the persona and conversational rules for the agent
+    chat_context = llm.ChatContext().append(
+        role="system",
+        text=(
+            "You are a highly advanced, natural voice assistant built for this platform. "
+            "Keep your answers short and conversational (1-2 sentences maximum). "
+            "Use natural vocal transitions and casual phrase choices. Do not use lists."
+        )
     )
 
-    # 3. Pass it to your agent initialization block right below it:
-    agent = VoicePipelineAgent(
-        vad=ctx.proc.vad,
-        asr=deepgram.ASR(),
-        llm=openai.LLM(system_prompt=regional_system_prompt), # <-- Injected here
+    # Step 3: Initialize the real-time conversational core worker
+    assistant = agents.voice_assistant.VoiceAssistant(
+        # Fast Speech-to-Text via Deepgram WebSocket streaming
+        vad=openai.VAD.with_device_config(),
+        stt=deepgram.STT(),
+        
+        # Fast LLM execution token-by-token
+        llm=openai.LLM(model="gpt-4o-mini"),
+        
+        # Fast Text-to-Speech audio package synthesis
         tts=openai.TTS(),
+        
+        chat_context=chat_context
     )
+
+    # Step 4: Boot up the assistant session inside the active audio room
+    assistant.start(ctx.room)
     
-    agent.start(ctx.room)
-    
-    # Keep the agent alive while the user is talking
-    await assistant.say("Hello, I am your healthcare assistant. What symptoms are you experiencing today?", allow_interruptions=True)
+    # Force the agent to speak first when the call connects
+    await assistant.say("Hey there! Your live audio pipeline is officially running. How can I help you?", allow_interruptions=True)
 
 if __name__ == "__main__":
+    # Launch the multi-threaded network listening worker
     cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
