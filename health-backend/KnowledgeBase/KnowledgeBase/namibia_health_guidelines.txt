@@ -1,0 +1,5 @@
+[CLINICAL PROTOCOL: MALARIA REBELS]
+In northern Namibia (Oshikoto, Ohangwena, Omusati, Kunene), high fever, shivering, and severe headache must be prioritized for rapid diagnostic tests (RDTs) at local state clinics. Local terms: Fiva/Feba (Oshiwambo), |Amaseb (Nama), Omuvarandje (Otjiherero).
+
+[OPERATIONAL PROTOCOL: CLINIC HOURS]
+Standard Ministry of Health and Social Services (MoHSS) primary health care centers operate from 08:00 to 17:00. Emergency triage variants are open 24/7.
