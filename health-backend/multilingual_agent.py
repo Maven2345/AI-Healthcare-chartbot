@@ -1,14 +1,17 @@
-import asyncio
-import pandas as pd
-import numpy as np
-from dotenv import load_dotenv
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
-from livekit.agents import AgentServer, AgentSession, JobContext, cli
-from livekit.plugins import openai, silero
+import os
 
-load_dotenv()
+print("📚 Injecting Custom Local Knowledge Base into LLM Memory...")
+knowledge_context = ""
+knowledge_folder = "KnowledgeBase"
 
+if os.path.exists(knowledge_folder):
+    for filename in os.listdir(knowledge_folder):
+        if filename.endswith(".txt"):
+            with open(os.path.join(knowledge_folder, filename), "r", encoding="utf-8") as f:
+                knowledge_context += f.read() + "\n\n"
+    print("✅ RAG Knowledge Base loaded successfully.")
+else:
+    print("⚠️ KnowledgeBase directory missing. Initializing fallback standard context.")
 # =====================================================================
 # 📊 LAYER 1: MACHINE LEARNING INITIALIZATION
 # =====================================================================
