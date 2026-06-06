@@ -1,6 +1,10 @@
-fastapi
-uvicorn
+streamlit>=1.30.0
+livekit-agents
+livekit-plugins-openai
+silero
 scikit-learn
 pandas
 numpy
-# fix
+matplotlib
+seaborn
+python-dotenv
