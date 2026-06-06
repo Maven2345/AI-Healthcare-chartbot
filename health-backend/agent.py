@@ -4,23 +4,22 @@ import numpy as np
 from dotenv import load_dotenv
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
-from livekit import agents
-from livekit.agents import JobContext, WorkerOptions, cli, llm
-from livekit.plugins import deepgram, openai
+from livekit.agents import AgentServer, AgentSession, JobContext, cli
+from livekit.plugins import deepgram, openai, silero
 
 load_dotenv()
 
 # =====================================================================
-# 📊 LAYER 1: YOUR MACHINE LEARNING MODEL INTEGRATION
+# 📊 LAYER 1: TRAIN YOUR CLINICAL HEALTHCARE MODEL ON STARTUP
 # =====================================================================
-print("🧠 Initializing Health AI Diagnostics Module...")
+print("🧠 System Booting: Initializing Health AI Datasets...")
 
-# Load your custom clinical datasets
+# Load your exact CSV dataset matrices
 training_df = pd.read_csv("Data/Training.csv")
 desc_df = pd.read_csv("MasterData/symptom_Description.csv")
 prec_df = pd.read_csv("MasterData/symptom_precaution.csv")
 
-# Build data lookup mappings
+# Generate lightning-fast memory lookup dicts
 symptom_descriptions = dict(zip(desc_df['Disease'], desc_df['Description']))
 symptom_precautions = {}
 for _, row in prec_df.iterrows():
@@ -29,7 +28,7 @@ for _, row in prec_df.iterrows():
         row['Precaution_3'], row['Precaution_4']
     ]
 
-# Train your exact Random Forest Classifier
+# Split target column 'prognosis' and fit feature structure
 X = training_df.drop('prognosis', axis=1)
 y = training_df['prognosis']
 symptom_columns = list(X.columns)
@@ -37,20 +36,23 @@ symptom_columns = list(X.columns)
 label_encoder = LabelEncoder()
 y_encoded = label_encoder.fit_transform(y)
 
-rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-rf_model.fit(X, y_encoded)
-print("🚀 Health AI Module loaded. Random Forest Model trained successfully.")
+# Fit Random Forest Classifier
+rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_classifier.fit(X, y_encoded)
+print("🚀 SUCCESS: Machine Learning model successfully trained and locked in memory.")
 
-# Custom internal helper function to match spoken words to your dataset
-def diagnose_voice_symptoms(spoken_text: str) -> dict:
+
+# Internal function to map human speech directly into machine learning arrays
+def evaluate_clinical_speech(spoken_text: str) -> dict:
+    # Initialize a clean, blank zero vector matching Training.csv length
     input_vector = np.zeros(len(symptom_columns))
     symptoms_found = []
     
-    # Check if any column names from Training.csv are hidden inside the spoken words
-    cleaned_text = spoken_text.lower().replace(" ", "_")
+    cleaned_speech = spoken_text.lower().replace(" ", "_")
+    
+    # Track down if any dataset symptom strings match the spoken phrase
     for symptom in symptom_columns:
-        # e.g., if user says "i have a skin rash", matches "skin_round" or "skin_rash"
-        if symptom in cleaned_text or symptom.replace("_", " ") in spoken_text.lower():
+        if symptom in cleaned_speech or symptom.replace("_", " ") in spoken_text.lower():
             idx = symptom_columns.index(symptom)
             input_vector[idx] = 1
             symptoms_found.append(symptom.replace("_", " "))
@@ -58,67 +60,73 @@ def diagnose_voice_symptoms(spoken_text: str) -> dict:
     if not symptoms_found:
         return None
 
-    # Compute machine learning prognosis
-    pred_idx = rf_model.predict([input_vector])[0]
-    predicted_disease = label_encoder.inverse_transform([pred_idx])[0]
+    # Run raw math matrix calculation prediction
+    prediction_index = rf_classifier.predict([input_vector])[0]
+    predicted_condition = label_encoder.inverse_transform([prediction_index])[0]
     
     return {
-        "disease": predicted_disease,
-        "description": symptom_descriptions.get(predicted_disease, "No detailed data available."),
-        "precautions": [p for p in symptom_precautions.get(predicted_disease, []) if pd.notna(p)]
+        "condition": predicted_condition,
+        "description": symptom_descriptions.get(predicted_condition, "No baseline analysis mapping available."),
+        "precautions": [p for p in symptom_precautions.get(predicted_condition, []) if pd.notna(p)]
     }
 
 # =====================================================================
-# 🎙️ LAYER 2: REAL-TIME LIVEKIT AUDIO PIPELINE
+# 🎙️ LAYER 2: INTERACTIVE LIVEKIT REAL-TIME VOICE PIPELINE
 # =====================================================================
+server = AgentServer()
+
+@server.rtc_session(agent_name="health-assistant")
 async def entrypoint(ctx: JobContext):
-    print(f"📞 Connected to Client Audio Stream. Job ID: {ctx.job.id}")
-    await ctx.connect(auto_subscribe=agents.AutoSubscribe.AUDIO_ONLY)
+    print(f"📡 Establishing continuous audio hand-shake. Session ID: {ctx.job.id}")
+    
+    # Accept user audio channel connection
+    await ctx.connect()
 
-    # Base prompt instructions for structural vocal pacing
-    chat_context = llm.ChatContext().append(
-        role="system",
-        text=(
-            "You are an empathetic, clinical voice assistant. Your job is to list user symptoms "
-            "and provide the diagnostic breakdown calculated by the machine learning model. "
-            "Keep speech completely natural, friendly, and concise. Speak in short paragraphs."
-        )
+    # Construct the base streaming multi-modal environment container
+    session = AgentSession(
+        vad=silero.VAD.load(), # Ultra-low latency voice activity detector
+        stt=deepgram.STT(model="deepgram/nova-3", language="en"), # Real-time speech-to-text
+        llm=openai.LLM(model="openai/gpt-4.1-mini"), # Handles language routing
+        tts=openai.TTS(), # Renders voice soundwaves
     )
 
-    assistant = agents.voice_assistant.VoiceAssistant(
-        vad=openai.VAD.with_device_config(),
-        stt=deepgram.STT(),
-        llm=openai.LLM(model="gpt-4o-mini"),
-        tts=openai.TTS(),
-        chat_context=chat_context
+    # Boot the workspace room session
+    await session.start(room=ctx.room)
+    
+    # Introduce the agent to the caller using high-fidelity TTS audio
+    await session.generate_reply(
+        instructions="Greet the patient warmly, tell them you are an automated AI Healthcare agent, and ask what physical symptoms they are experiencing."
     )
 
-    # Intercept the user's spoken words before the LLM generates a response
-    @assistant.on("user_speech_committed")
-    def on_user_speech(msg: llm.ChatMessage):
-        user_spoken_phrase = msg.text
-        print(f"🗣️ Client Said: '{user_spoken_phrase}'")
+    # Intercept speech tokens the exact millisecond the user stops talking
+    @session.on("user_turn_completed")
+    async def process_patient_turn(turn_info):
+        # Extract the text transcription produced by Deepgram
+        patient_text = turn_info.transcript.text
+        print(f"🗣️ Patient Verbalized: '{patient_text}'")
         
-        # Run the text through our Random Forest pipeline
-        diagnosis_result = diagnose_voice_symptoms(user_spoken_phrase)
+        # Route the text directly through our local Random Forest model calculation
+        diagnostic_insights = evaluate_clinical_speech(patient_text)
         
-        if diagnosis_result:
-            print(f"🎯 ML Match Found: {diagnosis_result['disease']}")
-            precautions_text = ", ".join(diagnosis_result['precautions'])
+        if diagnostic_insights:
+            print(f"🎯 Classifier Prediction: {diagnostic_insights['condition']}")
+            precautions_string = ", ".join(diagnostic_insights['precautions'])
             
-            # Rewrite the LLM's brain memory on the fly with your precise clinical data
-            custom_clinical_response = (
-                f"Based on the symptoms you mentioned, our Random Forest analysis suggests a strong correlation with "
-                f"{diagnosis_result['disease']}. To give you a bit of context: {diagnosis_result['description']} "
-                f"For your safety, here are the recommended precautions you should consider right away: {precautions_text}. "
-                f"Please remember to consult a medical professional if these symptoms persist."
+            # Formulate the response containing your explicit dataset contents
+            clinical_response_template = (
+                f"Based on the clinical indicators you described, our Random Forest analytical module detects a strong alignment with "
+                f"{diagnostic_insights['condition']}. To help you understand this better: {diagnostic_insights['description']} "
+                f"Please ensure you follow these safety precautions carefully: {precautions_string}. "
+                f"Always make sure to see a human practitioner for comprehensive validation."
             )
             
-            # Inject it into the chat track so the voice synthesizer speaks this text
-            asyncio.create_task(assistant.say(custom_clinical_response, allow_interruptions=True))
-
-    assistant.start(ctx.room)
-    await assistant.say("Hello, I am your AI Health Assistant. Please tell me what symptoms you are experiencing today.", allow_interruptions=True)
+            # Bypass generic AI chatter and force the voice generator to speak your explicit data response
+            await session.say(text=clinical_response_template)
+        else:
+            # If no explicit symptom matches were hit, fall back to helpful AI clarifying tracking
+            await session.generate_reply(
+                instructions=f"The user said: '{patient_text}'. Acknowledge gracefully that you need more clarity, and ask them to describe their symptoms with more specific medical terms."
+            )
 
 if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    cli.run_app(server)
